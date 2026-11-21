@@ -1,0 +1,20 @@
+{
+  "name": "bloom-habit-todo-app",
+  "version": "3.0.0",
+  "description": "A clean, smooth, cute, and unlimited Habit Tracker & To-Do List web app with Google Sign-In and local SQLite persistence.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test_server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "habit-tracker",
+    "todo-list",
+    "sqlite",
+    "google-auth",
+    "zero-server"
+  ],
+  "author": "",
+  "license": "MIT"
+}

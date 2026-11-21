@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="A clean, calm, cute, and unlimited Habit Tracker & To-Do List web app with Google Sign-In and SQLite persistence.">
+  <meta name="theme-color" content="#8FB89D">
+  <title>Bloom — Calm Habits & To-Dos</title>
+
+  <!-- PWA Manifest & Favicon -->
+  <link rel="manifest" href="./public/manifest.json">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%238FB89D'/><text x='50' y='62' font-size='42' text-anchor='middle'>🌸</text></svg>">
+
+  <!-- Aesthetic Pastel Stylesheet -->
+  <link rel="stylesheet" href="./public/css/style.css">
+
+  <!-- Official Google Identity Services SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- 1. MANDATORY SIGN-IN SCREEN -->
+  <div id="unauth-landing-screen" class="landing-screen">
+    <div class="landing-card">
+      <div class="brand-icon landing-logo" title="Bloom">🌸</div>
+      <h1 class="landing-title">Bloom</h1>
+      <p class="landing-subtitle">Calm habits & daily to-dos</p>
+      
+      <div class="landing-divider"></div>
+
+      <!-- Google Sign-In (Active on http://localhost or custom domain) -->
+      <div class="landing-auth-box" id="google-auth-box">
+        <p class="landing-auth-text">Sign in with your Google Account to access your personal habits and tasks.</p>
+        <div id="g_id_signin_landing_container" class="google-btn-wrapper">
+          <div class="loading-spinner">Loading Google Sign-In...</div>
+        </div>
+      </div>
+
+      <!-- Standalone Direct file:// Browser Open Box -->
+      <div class="landing-auth-box" id="file-standalone-box" style="display: none;">
+        <div style="font-size: 0.8rem; background: var(--pastel-amber-bg); color: #8A5A12; padding: 10px 12px; border-radius: var(--radius-sm); text-align: left; line-height: 1.45;">
+          <strong>Direct Browser Mode (file://)</strong><br>
+          Google OAuth requires a web origin (e.g. <code>http://localhost:3000</code> or your custom domain).
+          You can start using Bloom standalone right now with local persistence!
+        </div>
+        <button type="button" class="primary-add-btn" id="start-standalone-btn" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; margin-top: 6px;">
+          Start Standalone Session 🌱
+        </button>
+      </div>
+
+      <div class="landing-footer">
+        <span id="landing-storage-indicator">🔒 Unlimited personal space • Completely empty start</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. AUTHENTICATED APP DASHBOARD -->
+  <div id="authenticated-app-view" class="app-container" style="display: none;">
+    <header class="app-header">
+      <div class="brand-section">
+        <div class="brand-icon" title="Bloom">🌸</div>
+        <div>
+          <h1 class="brand-title">Bloom</h1>
+          <p class="brand-subtitle">Calm habits & daily to-dos</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="user-profile-pill" id="user-profile-btn" title="Click to view account">
+          <img class="user-avatar" id="header-user-avatar" src="" alt="Avatar">
+          <span class="user-name-text" id="header-user-name">User</span>
+        </div>
+
+        <button class="icon-btn" id="theme-toggle-btn" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">☀️</button>
+        <button class="icon-btn" id="sound-toggle-btn" title="Toggle Sound Feedback" aria-label="Toggle Sound">🔔</button>
+        <button class="icon-btn signout-btn" id="header-signout-btn" title="Sign Out" aria-label="Sign Out">🚪</button>
+      </div>
+    </header>
+
+    <div class="progress-card">
+      <div class="progress-info">
+        <span class="progress-label">Today's Rhythm</span>
+        <span class="progress-stat" id="progress-summary-text">No habits or tasks yet</span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progress-bar-fill"></div>
+      </div>
+      <div class="progress-percent" id="progress-percent-text">0%</div>
+    </div>
+
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="habits">
+        <span>🌱 Daily Habits</span>
+        <span class="badge" id="nav-habit-badge">0/0</span>
+      </button>
+      <button class="nav-tab" data-tab="todos">
+        <span>📝 To-Do List</span>
+        <span class="badge" id="nav-todo-badge">0</span>
+      </button>
+      <button class="nav-tab" data-tab="combined">
+        <span>🌸 Today View</span>
+      </button>
+    </nav>
+
+    <!-- HABITS SECTION -->
+    <section id="section-habits">
+      <div class="section-header">
+        <h2 class="section-title">
+          <span>Daily Habits</span>
+          <span style="font-size:0.8rem; font-weight:500; color:var(--text-muted);">(Single tap to complete)</span>
+        </h2>
+      </div>
+
+      <form class="input-card" id="add-habit-form">
+        <div class="input-row-main">
+          <input type="text" class="clean-input" id="habit-title-input" placeholder="Create a new habit (e.g. Read 10 Pages, Drink Water)..." autocomplete="off" required>
+          <button type="submit" class="primary-add-btn">
+            <span>+</span>
+            <span>Add</span>
+          </button>
+        </div>
+
+        <div class="input-options-row">
+          <span style="color:var(--text-light); font-weight:600;">Icon:</span>
+          <div class="pill-group">
+            <button type="button" class="option-pill habit-icon-pill active" data-icon="🌱">🌱 Habit</button>
+            <button type="button" class="option-pill habit-icon-pill" data-icon="💧">💧 Water</button>
+            <button type="button" class="option-pill habit-icon-pill" data-icon="🧘">🧘 Stretch</button>
+            <button type="button" class="option-pill habit-icon-pill" data-icon="📖">📖 Read</button>
+            <button type="button" class="option-pill habit-icon-pill" data-icon="🏃">🏃 Cardio</button>
+            <button type="button" class="option-pill habit-icon-pill" data-icon="🥗">🥗 Health</button>
+            <button type="button" class="option-pill habit-icon-pill" data-icon="💤">💤 Sleep</button>
+          </div>
+          <input type="text" id="habit-cat-input" class="clean-input" placeholder="Category (optional)" style="max-width:130px; font-size:0.8rem; padding:2px 8px; background:var(--bg-surface); border-radius:var(--radius-sm);">
+        </div>
+      </form>
+
+      <div class="items-list" id="habits-list-container"></div>
+    </section>
+
+    <!-- TO-DOS SECTION -->
+    <section id="section-todos" style="display: none;">
+      <div class="section-header">
+        <h2 class="section-title">Tasks & To-Dos</h2>
+        <button type="button" class="clear-btn" id="clear-completed-btn">Clear Completed</button>
+      </div>
+
+      <form class="input-card" id="add-todo-form">
+        <div class="input-row-main">
+          <input type="text" class="clean-input" id="todo-title-input" placeholder="What would you like to achieve today?..." autocomplete="off" required>
+          <button type="submit" class="primary-add-btn">
+            <span>+</span>
+            <span>Add</span>
+          </button>
+        </div>
+
+        <div class="input-options-row">
+          <span style="color:var(--text-light); font-weight:600;">Priority:</span>
+          <div class="pill-group">
+            <button type="button" class="option-pill todo-priority-pill" data-priority="low">🌱 Low</button>
+            <button type="button" class="option-pill todo-priority-pill active" data-priority="medium">☀️ Medium</button>
+            <button type="button" class="option-pill todo-priority-pill" data-priority="high">🔥 High</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="filter-search-bar">
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" id="todo-search-input" placeholder="Search tasks...">
+        </div>
+
+        <div class="filter-pills">
+          <button type="button" class="filter-btn active" data-filter="all">All</button>
+          <button type="button" class="filter-btn" data-filter="active">Active (<span id="active-todos-count">0</span>)</button>
+          <button type="button" class="filter-btn" data-filter="completed">Completed</button>
+        </div>
+      </div>
+
+      <div class="items-list" id="todos-list-container"></div>
+    </section>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Account Modal -->
+  <div class="modal-overlay" id="modal-account">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Your Account Profile</h3>
+        <button class="icon-btn modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body" style="text-align:center;">
+        <img id="modal-user-avatar" src="" alt="Avatar" style="width:72px; height:72px; border-radius:50%; margin:0 auto; display:block; background:var(--pastel-sage-bg);">
+        <h4 id="modal-user-name" style="font-size:1.1rem; margin-top:10px; color:var(--text-main);"></h4>
+        <p id="modal-user-email" style="font-size:0.85rem; color:var(--text-muted);"></p>
+
+        <div id="modal-storage-info" style="background:var(--bg-surface); border-radius:var(--radius-sm); padding:10px; font-size:0.8rem; text-align:left; margin-top:14px; line-height:1.6;">
+          ✓ Data saved persistently<br>
+          ✓ 30-day session active<br>
+          ✓ Zero artificial limits
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary modal-close-btn">Close</button>
+        <button type="button" class="btn-primary" id="modal-logout-btn" style="background:var(--pastel-rose); color:#FFFFFF;">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./public/js/storage.js"></script>
+  <script src="./public/js/auth.js"></script>
+  <script src="./public/js/habits.js"></script>
+  <script src="./public/js/todos.js"></script>
+  <script src="./public/js/app.js"></script>
+</body>
+</html>
