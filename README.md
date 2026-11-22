@@ -11,6 +11,15 @@ Designed to work in two flexible modes:
 ## 🌟 Key Features
 
 - **🌱 Completely Empty Start**: Zero sample habits, zero demo to-dos, zero seeded streaks. Your list belongs 100% to you from day one.
+- **⏰ Precision To-Do Reminders with Loud Single-Shot Alarm & 5-Min Follow-Ups**:
+  - **Exact 1-Minute-Early Heads-Up**: At exactly $T - 60\text{s}$ before scheduled time $T$, sends a notification and plays a single loud alarm chime once (not looping).
+  - **Exact On-Time Alert**: At scheduled time $T$, fires a single loud alarm chime and notification once.
+  - **5-Minute Follow-Up Rings Until Ticked**: If still uncompleted after on-time ring, triggers a follow-up notification + loud single chime every 5 minutes until marked done.
+  - **Instant Stop When Ticked / Completed**: The moment a task is checked off (or deleted/disabled), any currently playing alarm sound halts immediately and all future reminder/follow-up triggers are cancelled forever.
+  - **Loud Single-Shot Web Audio**: Punchy dual-pulse harmonic chime powered by `DynamicsCompressorNode` for maximum loudness without distortion on mobile (Android) and laptop speakers.
+  - **Robust Browser Audio Unlocking**: Automatic AudioContext unlock listeners on tap/click/touch/keydown with banner fallback prompt if browser blocks autoplay.
+  - **Active Alarm Dialog**: Touch-friendly Stop/Dismiss, 5-Minute Snooze, or direct "✓ Mark as Done" buttons.
+  - Persisted in SQLite (`./data/app.db`) and `localStorage` across reloads without duplicate triggering.
 - **✨ Clean, Cute & Minimal**: Soft pastel palette (sage, lavender, peach, sky), gentle dark mode toggle, and micro-interactions (sensory pop/chime sounds, pastel confetti celebration).
 - **🔒 Mandatory Google Sign-In (On Web / Localhost)**:
   - Exact Client ID: `13504827014-gdn9ek14fgld87pp3ad8m7jh3q2f0hq4.apps.googleusercontent.com`

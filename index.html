@@ -163,6 +163,24 @@
             <button type="button" class="option-pill todo-priority-pill" data-priority="high">🔥 High</button>
           </div>
         </div>
+
+        <div class="input-options-row todo-reminder-options">
+          <div class="reminder-time-group">
+            <span style="color:var(--text-light); font-weight:600; font-size:0.78rem;">⏰ Reminder:</span>
+            <input type="datetime-local" id="todo-reminder-time" class="clean-datetime-input" title="Set specific reminder date & time">
+            <button type="button" class="btn-clear-reminder" id="clear-add-reminder-btn" title="Clear reminder time" style="display:none;">✕</button>
+          </div>
+          <div class="reminder-toggle-group">
+            <label class="toggle-pill-label" title="Show browser push/desktop notification">
+              <input type="checkbox" id="todo-reminder-notify" checked>
+              <span>🔔 Notification</span>
+            </label>
+            <label class="toggle-pill-label" title="Play gentle audible chime alarm">
+              <input type="checkbox" id="todo-reminder-alarm" checked>
+              <span>🔊 Alarm Sound</span>
+            </label>
+          </div>
+        </div>
       </form>
 
       <div class="filter-search-bar">
@@ -205,6 +223,83 @@
       <div class="modal-footer">
         <button type="button" class="btn-secondary modal-close-btn">Close</button>
         <button type="button" class="btn-primary" id="modal-logout-btn" style="background:var(--pastel-rose); color:#FFFFFF;">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit To-Do & Reminder Modal -->
+  <div class="modal-overlay" id="modal-edit-todo">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Task & Reminder</h3>
+        <button class="icon-btn modal-close-btn">✕</button>
+      </div>
+      <form id="edit-todo-form">
+        <input type="hidden" id="edit-todo-id">
+        <div class="modal-body">
+          <div>
+            <label style="font-weight:600; font-size:0.82rem; display:block; margin-bottom:6px;">Task Title:</label>
+            <input type="text" id="edit-todo-title" class="clean-datetime-input" style="width:100%; font-size:0.95rem; padding:8px 10px;" required autocomplete="off">
+          </div>
+          <div>
+            <label style="font-weight:600; font-size:0.82rem; display:block; margin-bottom:6px;">Priority:</label>
+            <div class="pill-group" id="edit-todo-priority-group">
+              <button type="button" class="option-pill edit-priority-pill" data-priority="low">🌱 Low</button>
+              <button type="button" class="option-pill edit-priority-pill" data-priority="medium">☀️ Medium</button>
+              <button type="button" class="option-pill edit-priority-pill" data-priority="high">🔥 High</button>
+            </div>
+          </div>
+          <div>
+            <label style="font-weight:600; font-size:0.82rem; display:block; margin-bottom:6px;">Category (optional):</label>
+            <input type="text" id="edit-todo-category" class="clean-datetime-input" style="width:100%; font-size:0.9rem; padding:6px 10px;" placeholder="e.g. Work, Personal, Fitness">
+          </div>
+          <div style="background:var(--bg-surface); padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color);">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+              <label style="font-weight:700; font-size:0.82rem; color:var(--text-main);">⏰ Scheduled Reminder:</label>
+              <button type="button" class="clear-btn" id="edit-clear-reminder-btn" style="padding:0; font-size:0.75rem;">Clear Reminder</button>
+            </div>
+            <input type="datetime-local" id="edit-todo-reminder-time" class="clean-datetime-input" style="width:100%; margin-bottom:10px;">
+            <div class="reminder-toggle-group">
+              <label class="toggle-pill-label" title="Show browser push/desktop notification">
+                <input type="checkbox" id="edit-todo-reminder-notify" checked>
+                <span>🔔 Notification</span>
+              </label>
+              <label class="toggle-pill-label" title="Play gentle audible chime alarm">
+                <input type="checkbox" id="edit-todo-reminder-alarm" checked>
+                <span>🔊 Alarm Sound</span>
+              </label>
+            </div>
+            <div id="edit-reminder-status-note" style="margin-top:8px; font-size:0.75rem; color:var(--text-light);"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-close-btn">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Active Reminder Alarm Alert Dialog -->
+  <div class="modal-overlay" id="modal-reminder-alert">
+    <div class="modal-card alert-modal-card">
+      <div>
+        <div class="alarm-bell-icon">⏰</div>
+        <span class="alarm-pill-badge" id="alarm-badge">Reminder Due Now</span>
+        <h3 id="alarm-todo-title" style="font-size:1.2rem; font-weight:700; color:var(--text-main); margin:10px 0 6px; word-break:break-word;"></h3>
+        <p id="alarm-todo-time-text" style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;"></p>
+        
+        <div class="alarm-action-buttons">
+          <button type="button" class="btn-primary alarm-stop-btn" id="alarm-dismiss-btn">
+            ✕ Dismiss / Stop Alarm
+          </button>
+          <button type="button" class="btn-secondary" id="alarm-snooze-btn" title="Remind again in 5 minutes">
+            💤 Snooze 5 Minutes
+          </button>
+          <button type="button" class="btn-secondary" id="alarm-done-btn" style="color:var(--pastel-sage); border-color:var(--pastel-sage);" title="Mark task completed">
+            ✓ Mark as Done
+          </button>
+        </div>
       </div>
     </div>
   </div>

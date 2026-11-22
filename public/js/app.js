@@ -10,19 +10,41 @@ class BloomApp {
     this.soundEnabled = true;
     this.audioCtx = null;
     this.activeToastTimeout = null;
+    this.activeAlarmNodes = [];
 
     this.habitsManager = new HabitsManager(this);
     this.todosManager = new TodosManager(this);
     window.bloomHabits = this.habitsManager;
     window.bloomTodos = this.todosManager;
+    this.alarmInterval = null;
 
     this.init();
   }
 
   async init() {
+    this.setupAudioUnlockListeners();
     this.bindEvents();
     this.setupTheme();
     this.initConfetti();
+  }
+
+  setupAudioUnlockListeners() {
+    const unlock = () => this.unlockAudioContext();
+    ['click', 'touchstart', 'touchend', 'pointerdown', 'keydown'].forEach(evt => {
+      window.addEventListener(evt, unlock, { passive: true });
+    });
+  }
+
+  unlockAudioContext() {
+    try {
+      if (!this.audioCtx) {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtxClass) this.audioCtx = new AudioCtxClass();
+      }
+      if (this.audioCtx && this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume();
+      }
+    } catch (e) {}
   }
 
   async reloadState() {
@@ -93,8 +115,120 @@ class BloomApp {
     } catch (e) {}
   }
 
+  // Noticeably loud and clear single-shot alarm chime using Web Audio API with DynamicsCompressor
+  playLoudSingleShotAlarm() {
+    if (!this.soundEnabled) return;
+    this.stopAlarmSound();
+
+    try {
+      if (!this.audioCtx) {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtxClass) this.audioCtx = new AudioCtxClass();
+      }
+
+      if (this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume().catch(() => {
+          this.showToast('🔊 Tap anywhere to enable alarm sound');
+        });
+      }
+
+      const ctx = this.audioCtx;
+      const now = ctx.currentTime;
+
+      // DynamicsCompressor ensures punchy loudness without audio clipping or distortion
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-12, now);
+      compressor.knee.setValueAtTime(6, now);
+      compressor.ratio.setValueAtTime(4, now);
+      compressor.attack.setValueAtTime(0.003, now);
+      compressor.release.setValueAtTime(0.25, now);
+
+      // Master gain (0.82) - loud, authoritative, clear across laptop & phone speakers
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(0.82, now);
+
+      compressor.connect(masterGain);
+      masterGain.connect(ctx.destination);
+
+      this.activeAlarmNodes = [compressor, masterGain];
+
+      // Single-shot multi-tone sequence played ONCE per trigger event:
+      // Dual-pulse harmonic sequence: A5+E6 -> C#6+A6 -> gap -> D6+F#6 -> E6+G#6 -> A5+E6+A6 chord
+      const chords = [
+        { delay: 0.00, duration: 0.22, freqs: [880.00, 1318.51] }, // A5 + E6
+        { delay: 0.14, duration: 0.24, freqs: [1108.73, 1760.00] }, // C#6 + A6
+        { delay: 0.52, duration: 0.22, freqs: [1174.66, 1479.98] }, // D6 + F#6
+        { delay: 0.70, duration: 0.24, freqs: [1318.51, 1661.22] }, // E6 + G#6
+        { delay: 0.90, duration: 0.70, freqs: [880.00, 1318.51, 1760.00] } // Harmonic resolve: A5 + E6 + A6
+      ];
+
+      chords.forEach(({ delay, duration, freqs }) => {
+        const chordGain = ctx.createGain();
+        chordGain.gain.setValueAtTime(0.001, now + delay);
+        chordGain.gain.linearRampToValueAtTime(0.65, now + delay + 0.02);
+        chordGain.gain.exponentialRampToValueAtTime(0.0001, now + delay + duration);
+        chordGain.connect(compressor);
+        this.activeAlarmNodes.push(chordGain);
+
+        freqs.forEach(freq => {
+          const osc = ctx.createOscillator();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + delay);
+          osc.connect(chordGain);
+          osc.start(now + delay);
+          osc.stop(now + delay + duration);
+          this.activeAlarmNodes.push(osc);
+        });
+      });
+
+      // Clear references when single-shot playback completes
+      setTimeout(() => {
+        if (this.activeAlarmNodes.includes(masterGain)) {
+          this.activeAlarmNodes = [];
+        }
+      }, 1800);
+
+    } catch (e) {
+      console.warn('Web Audio alarm playback error:', e);
+    }
+  }
+
+  // Backwards compatibility alias
+  startAlarmSound() {
+    this.playLoudSingleShotAlarm();
+  }
+
+  // Instantly stop any active alarm sound
+  stopAlarmSound() {
+    if (this.alarmInterval) {
+      clearInterval(this.alarmInterval);
+      this.alarmInterval = null;
+    }
+
+    if (this.activeAlarmNodes && this.activeAlarmNodes.length) {
+      const now = this.audioCtx ? this.audioCtx.currentTime : 0;
+      this.activeAlarmNodes.forEach(node => {
+        try {
+          if (node.gain) {
+            node.gain.setValueAtTime(0, now);
+          }
+          if (node.stop) {
+            node.stop(now);
+          }
+          if (node.disconnect) {
+            node.disconnect();
+          }
+        } catch (e) {}
+      });
+      this.activeAlarmNodes = [];
+    }
+  }
+
   toggleSound() {
     this.soundEnabled = !this.soundEnabled;
+    if (!this.soundEnabled) {
+      this.stopAlarmSound();
+    }
     const btn = document.getElementById('sound-toggle-btn');
     if (btn) btn.textContent = this.soundEnabled ? '🔔' : '🔕';
     this.saveAllData();
@@ -342,10 +476,35 @@ class BloomApp {
       const input = document.getElementById('todo-title-input');
       const priorityElem = document.querySelector('.todo-priority-pill.active');
       const priority = priorityElem ? priorityElem.dataset.priority : 'medium';
+
+      const reminderTimeInput = document.getElementById('todo-reminder-time');
+      const reminderNotifyInput = document.getElementById('todo-reminder-notify');
+      const reminderAlarmInput = document.getElementById('todo-reminder-alarm');
+
+      const reminderTime = reminderTimeInput && reminderTimeInput.value ? reminderTimeInput.value : null;
+      const reminderNotify = reminderNotifyInput ? reminderNotifyInput.checked : true;
+      const reminderAlarm = reminderAlarmInput ? reminderAlarmInput.checked : true;
+
       if (input && input.value.trim()) {
-        this.todosManager.addTodo(input.value.trim(), priority);
+        this.todosManager.addTodo(input.value.trim(), priority, 'General', reminderTime, reminderNotify, reminderAlarm);
         input.value = '';
+        if (reminderTimeInput) reminderTimeInput.value = '';
+        const clearBtn = document.getElementById('clear-add-reminder-btn');
+        if (clearBtn) clearBtn.style.display = 'none';
       }
+    });
+
+    // Clear reminder button on Add To-Do form
+    const reminderTimeInput = document.getElementById('todo-reminder-time');
+    const clearAddReminderBtn = document.getElementById('clear-add-reminder-btn');
+    reminderTimeInput?.addEventListener('input', () => {
+      if (clearAddReminderBtn) {
+        clearAddReminderBtn.style.display = reminderTimeInput.value ? 'inline-block' : 'none';
+      }
+    });
+    clearAddReminderBtn?.addEventListener('click', () => {
+      if (reminderTimeInput) reminderTimeInput.value = '';
+      clearAddReminderBtn.style.display = 'none';
     });
 
     // Priority pill toggles in add todo
@@ -354,6 +513,79 @@ class BloomApp {
         document.querySelectorAll('.todo-priority-pill').forEach(p => p.classList.remove('active'));
         pill.classList.add('active');
       });
+    });
+
+    // Priority pill toggles in edit todo modal
+    document.querySelectorAll('.edit-priority-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('.edit-priority-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+      });
+    });
+
+    // Clear reminder button in edit todo modal
+    document.getElementById('edit-clear-reminder-btn')?.addEventListener('click', () => {
+      const editTimeInput = document.getElementById('edit-todo-reminder-time');
+      if (editTimeInput) editTimeInput.value = '';
+      const statusNote = document.getElementById('edit-reminder-status-note');
+      if (statusNote) statusNote.textContent = 'Reminder cleared. Click Save Changes to confirm.';
+    });
+
+    // Submit Edit To-Do Form
+    const editForm = document.getElementById('edit-todo-form');
+    editForm?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const id = document.getElementById('edit-todo-id')?.value;
+      const title = document.getElementById('edit-todo-title')?.value;
+      const category = document.getElementById('edit-todo-category')?.value;
+      const priorityElem = document.querySelector('.edit-priority-pill.active');
+      const priority = priorityElem ? priorityElem.dataset.priority : 'medium';
+
+      const editTimeInput = document.getElementById('edit-todo-reminder-time');
+      const editNotifyInput = document.getElementById('edit-todo-reminder-notify');
+      const editAlarmInput = document.getElementById('edit-todo-reminder-alarm');
+
+      const reminderTime = editTimeInput && editTimeInput.value ? editTimeInput.value : null;
+      const reminderNotify = editNotifyInput ? editNotifyInput.checked : true;
+      const reminderAlarm = editAlarmInput ? editAlarmInput.checked : true;
+
+      if (id && title && title.trim()) {
+        this.todosManager.updateTodo(id, {
+          title: title.trim(),
+          priority,
+          category: category ? category.trim() : 'General',
+          reminderTime,
+          reminderNotify,
+          reminderAlarm
+        });
+        this.closeModal('modal-edit-todo');
+      }
+    });
+
+    // Alarm Alert Modal Buttons (Stop, Snooze, Done)
+    document.getElementById('alarm-dismiss-btn')?.addEventListener('click', () => {
+      this.stopAlarmSound();
+      this.closeModal('modal-reminder-alert');
+    });
+
+    document.getElementById('alarm-snooze-btn')?.addEventListener('click', () => {
+      const modal = document.getElementById('modal-reminder-alert');
+      const id = modal?.dataset.todoId;
+      if (id) {
+        this.todosManager.snoozeTodo(id, 5);
+      }
+      this.stopAlarmSound();
+      this.closeModal('modal-reminder-alert');
+    });
+
+    document.getElementById('alarm-done-btn')?.addEventListener('click', () => {
+      const modal = document.getElementById('modal-reminder-alert');
+      const id = modal?.dataset.todoId;
+      if (id) {
+        this.todosManager.toggleTodo(id);
+      }
+      this.stopAlarmSound();
+      this.closeModal('modal-reminder-alert');
     });
 
     // Add Habit

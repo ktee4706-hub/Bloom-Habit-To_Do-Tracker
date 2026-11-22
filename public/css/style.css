@@ -968,6 +968,229 @@ body {
 }
 
 /* ==========================================================================
+   To-Do Reminder Controls & Badges
+   ========================================================================== */
+.todo-reminder-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-color);
+}
+
+.reminder-time-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.clean-datetime-input {
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.8rem;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.clean-datetime-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px rgba(143, 184, 157, 0.15);
+}
+
+.reminder-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.toggle-pill-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg-surface);
+  padding: 4px 9px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+}
+
+.toggle-pill-label:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-main);
+}
+
+.toggle-pill-label input[type="checkbox"] {
+  accent-color: var(--pastel-sage);
+  cursor: pointer;
+}
+
+.btn-clear-reminder {
+  background: transparent;
+  border: none;
+  color: var(--text-light);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.btn-clear-reminder:hover {
+  color: var(--pastel-rose);
+  background: var(--bg-surface-hover);
+}
+
+.todo-reminder-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--pastel-amber-bg);
+  color: #8A5A12;
+  border: 1px solid rgba(226, 176, 104, 0.35);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.todo-reminder-pill:hover {
+  border-color: var(--pastel-amber);
+}
+
+.todo-reminder-pill.passed {
+  background: var(--bg-surface);
+  color: var(--text-light);
+  border-color: var(--border-color);
+}
+
+.reminder-clear-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 2px;
+  margin-left: 2px;
+  line-height: 1;
+  border-radius: 50%;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
+
+.reminder-clear-btn:hover {
+  opacity: 1;
+  color: var(--pastel-rose);
+}
+
+/* ==========================================================================
+   Active Reminder Alarm Alert Modal
+   ========================================================================== */
+.alert-modal-card {
+  max-width: 400px;
+  text-align: center;
+  border: 2px solid var(--pastel-amber);
+  box-shadow: 0 10px 36px rgba(226, 176, 104, 0.28);
+}
+
+.alarm-bell-icon {
+  font-size: 46px;
+  margin-bottom: 6px;
+  display: inline-block;
+  animation: alarmPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes alarmPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.15) rotate(-14deg); }
+  75% { transform: scale(1.15) rotate(14deg); }
+}
+
+.alarm-pill-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--pastel-amber-bg);
+  color: #8A5A12;
+  padding: 3px 12px;
+  border-radius: var(--radius-full);
+  margin-bottom: 6px;
+  transition: all var(--transition-fast);
+}
+
+.alarm-pill-badge.early {
+  background: rgba(226, 176, 104, 0.25);
+  color: #9A5B00;
+}
+
+.alarm-pill-badge.due {
+  background: rgba(224, 112, 112, 0.25);
+  color: #B83232;
+}
+
+.alarm-pill-badge.followup {
+  background: rgba(186, 140, 220, 0.25);
+  color: #6E328A;
+}
+
+.reminder-state-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.reminder-state-tag.due {
+  background: rgba(224, 112, 112, 0.18);
+  color: #C43D3D;
+}
+
+.reminder-state-tag.done {
+  background: rgba(143, 184, 157, 0.18);
+  color: var(--pastel-sage-dark);
+}
+
+.alarm-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 14px;
+}
+
+.alarm-stop-btn {
+  background: var(--pastel-amber);
+  color: #FFFFFF;
+  font-weight: 700;
+  padding: 10px 16px;
+  font-size: 0.92rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.alarm-stop-btn:hover {
+  background: #d49e54;
+}
+
+/* ==========================================================================
    Modals
    ========================================================================== */
 .modal-overlay {
@@ -1194,5 +1417,22 @@ body {
     right: 16px;
     left: 16px;
     align-items: center;
+  }
+
+  .alert-modal-card {
+    padding: 22px 18px;
+    width: 92%;
+    max-width: 360px;
+    margin: 0 auto;
+  }
+
+  .alarm-bell-icon {
+    font-size: 40px;
+  }
+
+  .alarm-action-buttons button {
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    min-height: 44px;
   }
 }

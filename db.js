@@ -70,7 +70,13 @@ function initDb() {
         priority TEXT DEFAULT 'medium',
         category TEXT DEFAULT 'General',
         created_at TEXT DEFAULT (datetime('now')),
-        completed_at TEXT
+        completed_at TEXT,
+        reminder_time TEXT,
+        reminder_notify INTEGER DEFAULT 1,
+        reminder_alarm INTEGER DEFAULT 1,
+        reminder_triggered INTEGER DEFAULT 0,
+        early_fired INTEGER DEFAULT 0,
+        last_follow_up TEXT
       );
 
       -- User UI Settings table
@@ -87,6 +93,14 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_habits_user_id ON habits(user_id);
       CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(user_id);
     `);
+
+    // Safe column migrations for existing databases
+    try { db.exec('ALTER TABLE todos ADD COLUMN reminder_time TEXT;'); } catch (e) {}
+    try { db.exec('ALTER TABLE todos ADD COLUMN reminder_notify INTEGER DEFAULT 1;'); } catch (e) {}
+    try { db.exec('ALTER TABLE todos ADD COLUMN reminder_alarm INTEGER DEFAULT 1;'); } catch (e) {}
+    try { db.exec('ALTER TABLE todos ADD COLUMN reminder_triggered INTEGER DEFAULT 0;'); } catch (e) {}
+    try { db.exec('ALTER TABLE todos ADD COLUMN early_fired INTEGER DEFAULT 0;'); } catch (e) {}
+    try { db.exec('ALTER TABLE todos ADD COLUMN last_follow_up TEXT;'); } catch (e) {}
 
     isConnected = true;
     connectionError = null;
@@ -239,7 +253,13 @@ function getTodos(userId) {
     priority: r.priority || 'medium',
     category: r.category || 'General',
     createdAt: r.created_at,
-    completedAt: r.completed_at
+    completedAt: r.completed_at,
+    reminderTime: r.reminder_time || null,
+    reminderNotify: r.reminder_notify !== null && r.reminder_notify !== undefined ? Boolean(r.reminder_notify) : true,
+    reminderAlarm: r.reminder_alarm !== null && r.reminder_alarm !== undefined ? Boolean(r.reminder_alarm) : true,
+    reminderTriggered: Boolean(r.reminder_triggered),
+    earlyFired: Boolean(r.early_fired),
+    lastFollowUp: r.last_follow_up || null
   }));
 }
 
@@ -257,14 +277,20 @@ function saveTodos(userId, todos) {
   }
 
   const upsertStmt = db.prepare(`
-    INSERT INTO todos (id, user_id, title, completed, priority, category, created_at, completed_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO todos (id, user_id, title, completed, priority, category, created_at, completed_at, reminder_time, reminder_notify, reminder_alarm, reminder_triggered, early_fired, last_follow_up)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (id) DO UPDATE SET
       title = excluded.title,
       completed = excluded.completed,
       priority = excluded.priority,
       category = excluded.category,
-      completed_at = excluded.completed_at
+      completed_at = excluded.completed_at,
+      reminder_time = excluded.reminder_time,
+      reminder_notify = excluded.reminder_notify,
+      reminder_alarm = excluded.reminder_alarm,
+      reminder_triggered = excluded.reminder_triggered,
+      early_fired = excluded.early_fired,
+      last_follow_up = excluded.last_follow_up
   `);
 
   for (const t of todos) {
@@ -276,7 +302,13 @@ function saveTodos(userId, todos) {
       t.priority || 'medium',
       t.category || 'General',
       t.createdAt || new Date().toISOString(),
-      t.completedAt || null
+      t.completedAt || null,
+      t.reminderTime || null,
+      t.reminderNotify !== false ? 1 : 0,
+      t.reminderAlarm !== false ? 1 : 0,
+      t.reminderTriggered ? 1 : 0,
+      t.earlyFired ? 1 : 0,
+      t.lastFollowUp || null
     );
   }
 }
